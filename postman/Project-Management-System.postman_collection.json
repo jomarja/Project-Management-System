@@ -1,0 +1,1405 @@
+{
+  "info": {
+    "name": "Project Management System",
+    "description": "Start the application first (http://localhost:8080), then run the whole collection in order. Each request saves the ids it creates into collection variables and checks the response with tests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "projectId",
+      "value": ""
+    },
+    {
+      "key": "taskId",
+      "value": ""
+    },
+    {
+      "key": "secondTaskId",
+      "value": ""
+    },
+    {
+      "key": "tagId",
+      "value": ""
+    },
+    {
+      "key": "attachmentPath",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Projects",
+      "description": "CRUD for projects, pagination/sorting and error handling.",
+      "item": [
+        {
+          "name": "Create project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const project = pm.response.json();",
+                  "pm.test(\"Project has an id and a createdAt time\", () => {",
+                  "    pm.expect(project.id).to.be.a(\"number\");",
+                  "    pm.expect(project.createdAt).to.be.a(\"string\");",
+                  "});",
+                  "pm.collectionVariables.set(\"projectId\", project.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects"
+              ]
+            },
+            "description": "@PostMapping + @Valid @RequestBody. Saves the new id into {{projectId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Website\",\n  \"description\": \"Company website\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create project - validation error (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "pm.test(\"Error lists the invalid field\", () => {",
+                  "    pm.expect(pm.response.json().errors.name).to.eql(\"Project name is required\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects"
+              ]
+            },
+            "description": "JSR-303 validation: blank name is rejected with a list of invalid fields.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"description\": \"Name is missing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get all projects (paged and sorted)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Response is a page of projects\", () => {",
+                  "    pm.expect(body.content).to.be.an(\"array\");",
+                  "    pm.expect(body.page.number).to.eql(0);",
+                  "    pm.expect(body.page.size).to.eql(5);",
+                  "    pm.expect(body.page.totalElements).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects?page=0&size=5&sort=name,asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "5"
+                },
+                {
+                  "key": "sort",
+                  "value": "name,asc"
+                }
+              ]
+            },
+            "description": "Server-side pagination and sorting with Pageable: ?page=0&size=5&sort=name,asc"
+          }
+        },
+        {
+          "name": "Get project by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Returns the created project\", () => {",
+                  "    pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get(\"projectId\")));",
+                  "    pm.expect(pm.response.json().name).to.eql(\"Website\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}"
+              ]
+            },
+            "description": "@PathVariable example."
+          }
+        },
+        {
+          "name": "Update project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Name and description are updated\", () => {",
+                  "    pm.expect(pm.response.json().name).to.eql(\"Website (updated)\");",
+                  "    pm.expect(pm.response.json().description).to.eql(\"New company website\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}"
+              ]
+            },
+            "description": "@PutMapping with @PathVariable + @Valid @RequestBody.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Website (updated)\",\n  \"description\": \"New company website\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get project - not found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.test(\"Error explains what was not found\", () => {",
+                  "    pm.expect(pm.response.json().detail).to.eql(\"Project not found with id 999999\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "999999"
+              ]
+            },
+            "description": "Missing resources return 404 with a clear message."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Tags",
+      "description": "Tags are later assigned to tasks (many-to-many).",
+      "item": [
+        {
+          "name": "Create tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const tag = pm.response.json();",
+                  "pm.test(\"Tag has an id, name and color\", () => {",
+                  "    pm.expect(tag.id).to.be.a(\"number\");",
+                  "    pm.expect(tag.name).to.eql(\"backend\");",
+                  "    pm.expect(tag.color).to.eql(\"#FF5733\");",
+                  "});",
+                  "pm.collectionVariables.set(\"tagId\", tag.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tags",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tags"
+              ]
+            },
+            "description": "Saves the new id into {{tagId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"backend\",\n  \"color\": \"#FF5733\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create tag - invalid color (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "pm.test(\"Color must be a hex code\", () => {",
+                  "    pm.expect(pm.response.json().errors.color).to.eql(\"Color must be a hex code like #FF5733\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tags",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tags"
+              ]
+            },
+            "description": "@Pattern validation on the color field.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"frontend\",\n  \"color\": \"red\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get all tags",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Contains the created tag\", () => {",
+                  "    pm.expect(pm.response.json().map(tag => tag.id)).to.include(Number(pm.collectionVariables.get(\"tagId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tags",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tags"
+              ]
+            },
+            "description": "All tags sorted by name (Sort.by(\"name\"))."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Tasks",
+      "description": "Tasks inside a project, tags, search, filters and custom queries.",
+      "item": [
+        {
+          "name": "Create task in project (overdue)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const task = pm.response.json();",
+                  "pm.test(\"Task belongs to the project\", () => {",
+                  "    pm.expect(task.id).to.be.a(\"number\");",
+                  "    pm.expect(task.projectId).to.eql(Number(pm.collectionVariables.get(\"projectId\")));",
+                  "    pm.expect(task.status).to.eql(\"TODO\");",
+                  "});",
+                  "pm.collectionVariables.set(\"taskId\", task.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "tasks"
+              ]
+            },
+            "description": "Due date is in the past, so this task shows up in the overdue query. Saves {{taskId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Login page\",\n  \"description\": \"Build the login page\",\n  \"status\": \"TODO\",\n  \"dueDate\": \"2026-01-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create second task in project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "pm.collectionVariables.set(\"secondTaskId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "tasks"
+              ]
+            },
+            "description": "In progress with a future due date. Saves {{secondTaskId}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Signup form\",\n  \"description\": \"Build the signup form\",\n  \"status\": \"IN_PROGRESS\",\n  \"dueDate\": \"2099-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create task - validation error (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "const errors = pm.response.json().errors;",
+                  "pm.test(\"Title and status are reported as invalid\", () => {",
+                  "    pm.expect(errors.title).to.eql(\"Task title is required\");",
+                  "    pm.expect(errors.status).to.eql(\"Status is required (TODO, IN_PROGRESS or DONE)\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "tasks"
+              ]
+            },
+            "description": "Blank title and missing status are rejected.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create task - project not found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404 Not Found\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/999999/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "999999",
+                "tasks"
+              ]
+            },
+            "description": "A task cannot be created in a project that does not exist.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Login page\",\n  \"description\": \"Build the login page\",\n  \"status\": \"TODO\",\n  \"dueDate\": \"2026-01-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get all tasks (paged and sorted)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Returns one task per page, sorted by title descending\", () => {",
+                  "    pm.expect(body.page.size).to.eql(1);",
+                  "    pm.expect(body.content.length).to.be.at.most(1);",
+                  "    pm.expect(body.page.totalElements).to.be.at.least(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks?page=0&size=1&sort=title,desc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "1"
+                },
+                {
+                  "key": "sort",
+                  "value": "title,desc"
+                }
+              ]
+            },
+            "description": "Pageable + Sort: ?page=0&size=1&sort=title,desc"
+          }
+        },
+        {
+          "name": "Get all tasks - unknown sort field (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400 Bad Request\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks?sort=nonsense",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "nonsense"
+                }
+              ]
+            },
+            "description": "Sorting by a field that does not exist returns 400 instead of 500."
+          }
+        },
+        {
+          "name": "Get task by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Returns the created task\", () => {",
+                  "    pm.expect(pm.response.json().title).to.eql(\"Login page\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{taskId}}"
+              ]
+            },
+            "description": "@PathVariable example."
+          }
+        },
+        {
+          "name": "Update task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Description is updated\", () => {",
+                  "    pm.expect(pm.response.json().description).to.eql(\"Build the login page with remember me\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{taskId}}"
+              ]
+            },
+            "description": "Replaces title, description, status and due date.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Login page\",\n  \"description\": \"Build the login page with remember me\",\n  \"status\": \"TODO\",\n  \"dueDate\": \"2026-01-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Assign tags to task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Task now has the tag\", () => {",
+                  "    pm.expect(pm.response.json().tags.map(tag => tag.id)).to.eql([Number(pm.collectionVariables.get(\"tagId\"))]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}/tags",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{taskId}}",
+                "tags"
+              ]
+            },
+            "description": "Many-to-many: replaces the tags of the task.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tagIds\": [{{tagId}}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Assign tags - tag not found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404 Not Found\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}/tags",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{taskId}}",
+                "tags"
+              ]
+            },
+            "description": "Every tag id must exist.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tagIds\": [999999]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Search tasks by title",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Finds the task, ignoring upper/lower case\", () => {",
+                  "    pm.expect(pm.response.json().content.map(task => task.id)).to.include(Number(pm.collectionVariables.get(\"taskId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/search?title=LOGIN&page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "LOGIN"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Method-name query findByTitleContainingIgnoreCase (paged)."
+          }
+        },
+        {
+          "name": "Search tasks by title and status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const tasks = pm.response.json().content;",
+                  "pm.test(\"Only IN_PROGRESS tasks are returned\", () => {",
+                  "    pm.expect(tasks.map(task => task.id)).to.include(Number(pm.collectionVariables.get(\"secondTaskId\")));",
+                  "    tasks.forEach(task => pm.expect(task.status).to.eql(\"IN_PROGRESS\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/search?title=signup&status=IN_PROGRESS",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "signup"
+                },
+                {
+                  "key": "status",
+                  "value": "IN_PROGRESS"
+                }
+              ]
+            },
+            "description": "Method-name query findByTitleContainingIgnoreCaseAndStatus (paged)."
+          }
+        },
+        {
+          "name": "Get project tasks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Project has both tasks\", () => {",
+                  "    pm.expect(pm.response.json().map(task => task.id)).to.have.members([Number(pm.collectionVariables.get(\"taskId\")), Number(pm.collectionVariables.get(\"secondTaskId\"))]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "tasks"
+              ]
+            },
+            "description": "Method-name query findByProjectId."
+          }
+        },
+        {
+          "name": "Get project tasks by status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Only the TODO task is returned\", () => {",
+                  "    pm.expect(pm.response.json().map(task => task.id)).to.eql([Number(pm.collectionVariables.get(\"taskId\"))]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks?status=TODO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "TODO"
+                }
+              ]
+            },
+            "description": "Method-name query findByProjectIdAndStatus."
+          }
+        },
+        {
+          "name": "Get project tasks - unknown status (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400 Bad Request\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}/tasks?status=WRONG",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "WRONG"
+                }
+              ]
+            },
+            "description": "Status must be TODO, IN_PROGRESS or DONE."
+          }
+        },
+        {
+          "name": "Get overdue tasks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const ids = pm.response.json().map(task => task.id);",
+                  "pm.test(\"Contains the overdue task but not the future one\", () => {",
+                  "    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"taskId\")));",
+                  "    pm.expect(ids).to.not.include(Number(pm.collectionVariables.get(\"secondTaskId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/overdue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "overdue"
+              ]
+            },
+            "description": "Custom @Query findOverdueTasks: not DONE and due date before today."
+          }
+        },
+        {
+          "name": "Get tasks by tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const ids = pm.response.json().map(task => task.id);",
+                  "pm.test(\"Contains only the tagged task\", () => {",
+                  "    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"taskId\")));",
+                  "    pm.expect(ids).to.not.include(Number(pm.collectionVariables.get(\"secondTaskId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/by-tag?name=BACKEND",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "by-tag"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "BACKEND"
+                }
+              ]
+            },
+            "description": "Custom @Query findByTagName (case-insensitive)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Attachment",
+      "description": "File upload with MultipartFile (multipart/form-data).",
+      "item": [
+        {
+          "name": "Upload attachment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const path = pm.response.json().attachmentPath;",
+                  "pm.test(\"File is stored in the uploads folder\", () => {",
+                  "    pm.expect(path).to.match(/^uploads.+_sample-attachment\\.txt$/);",
+                  "});",
+                  "pm.collectionVariables.set(\"attachmentPath\", path);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}/attachment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{taskId}}",
+                "attachment"
+              ]
+            },
+            "description": "Sends postman/sample-attachment.txt in the form field \"file\". In the Postman app, re-select the file if it shows as missing.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/sample-attachment.txt"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get task - attachment path is saved",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Path is stored in the database\", () => {",
+                  "    pm.expect(pm.response.json().attachmentPath).to.eql(pm.collectionVariables.get(\"attachmentPath\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{taskId}}"
+              ]
+            },
+            "description": "Reads the task again to prove the path was saved."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Cleanup",
+      "description": "Deletes the data created by this run.",
+      "item": [
+        {
+          "name": "Delete task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204 No Content\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{secondTaskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{secondTaskId}}"
+              ]
+            },
+            "description": "@DeleteMapping example."
+          }
+        },
+        {
+          "name": "Get deleted task (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404 Not Found\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{secondTaskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{secondTaskId}}"
+              ]
+            },
+            "description": "The task is gone."
+          }
+        },
+        {
+          "name": "Delete project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204 No Content\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}"
+              ]
+            },
+            "description": "Deleting a project also deletes its tasks (cascade)."
+          }
+        },
+        {
+          "name": "Get task of deleted project (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404 Not Found\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{taskId}}"
+              ]
+            },
+            "description": "The project's task was deleted together with the project."
+          }
+        }
+      ]
+    }
+  ]
+}

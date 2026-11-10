@@ -1,0 +1,7 @@
+target/
+.idea/
+*.iml
+
+# Local H2 database files and uploaded attachments
+data/
+uploads/
